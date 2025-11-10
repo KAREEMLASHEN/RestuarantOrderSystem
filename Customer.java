@@ -47,14 +47,58 @@ public class Customer extends Person {
     public static void registerCustomer(ArrayList<Customer> customers, Scanner scanner) {
         System.out.println("\n=== CUSTOMER REGISTRATION ===");
         
-        System.out.print("Enter your name: ");
-        String name = scanner.nextLine();
+       String name;
+        while (true) {
+            System.out.print("Enter your name: ");
+            name = scanner.nextLine();
         
-        System.out.print("Enter email: ");
-        String email = scanner.nextLine();
+            if (name.length() < 3) {
+                System.out.println(" Name must be at least 3 characters long!");
+                continue;
+        }
         
-        System.out.print("Enter phone number: ");
-        String phone = scanner.nextLine();
+            if (!name.matches("[a-zA-Z\\s]+")) {
+                System.out.println(" Name must contain only letters!");
+                continue;
+        }
+        
+            break;
+        }
+    
+    
+        String email;
+        while (true) {
+            System.out.print("Enter email: ");
+            email = scanner.nextLine();
+        
+            if (!email.contains("@") || !email.contains(".")) {
+                System.out.println(" Invalid email format! Must contain @ and domain (e.g., user@example.com)");
+                continue;
+            }
+            break;
+        }
+    
+        String phone;
+        while (true) {
+            System.out.print("Enter phone number: ");
+            phone = scanner.nextLine();
+        
+            if (phone.length() != 11) {
+                System.out.println(" Phone number must be exactly 11 digits!");
+                continue;
+            }
+            if (!phone.startsWith("01")) {
+                System.out.println(" Phone number must start with 01!");
+                continue;
+            }
+            if (!phone.matches("\\d+")) {
+            System.out.println(" Phone number must contain only digits!");
+            continue;
+            }
+        
+            break;
+        }
+        
         
         System.out.print("Enter username: ");
         String username = scanner.nextLine();
