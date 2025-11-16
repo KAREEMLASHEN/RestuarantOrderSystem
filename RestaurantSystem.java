@@ -108,17 +108,18 @@ public class RestaurantSystem {
     
     // ==================== CASHIER MENU ====================
     
-    private static void cashierMenu(Cashier cashier) {
+private static void cashierMenu(Cashier cashier) {
         while (true) {
             System.out.println("\n========== CASHIER MENU ==========");
             System.out.println("Hello, " + cashier.getName() + "!");
             System.out.println("===================================");
-            System.out.println("1. ️ Process Takeaway Order");
-            System.out.println("2. ️ Process Dine-In Order");
+            System.out.println("1.  Process Takeaway Order");
+            System.out.println("2.  Process Dine-In Order");
             System.out.println("3.  View All Tables");
             System.out.println("4.  Release Table");
-            System.out.println("5.  View Menu");
-            System.out.println("6.  Logout");
+            System.out.println("5.  View Profile");
+            System.out.println("6.  View Menu");
+            System.out.println("7.  Logout");
             System.out.println("===================================");
             System.out.print("Choose an option: ");
             
@@ -129,8 +130,9 @@ public class RestaurantSystem {
                 case 2 -> processDineIn(cashier);
                 case 3 -> viewTables();
                 case 4 -> releaseTable();
-                case 5 -> menu.displayMenu();
-                case 6 -> {
+                case 5 -> System.out.println(cashier.getDetails());
+                case 6 -> menu.displayMenu();
+                case 7 -> {
                     System.out.println(" Logged out successfully!");
                     return;
                 }
