@@ -1,8 +1,10 @@
 package restaurantsystem;
 
+import java.io.Serializable;
 import java.util.*;
 
-public class Menu {
+public class Menu implements Serializable{
+    private static final long serialVersionUID=1L;
     private Date lastUpdate;
     private ArrayList<MenuItem> items;
 
