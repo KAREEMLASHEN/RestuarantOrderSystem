@@ -1,8 +1,11 @@
 package restaurantsystem;
 
+import java.io.Serializable;
 import java.util.*;
 
-public class Table {
+public class Table implements Serializable{
+    private static final long serialVersionUID = 1L;
+;
     /**
      * Table status enum
      */
@@ -52,37 +55,47 @@ public class Table {
 
     // ==================== STATIC METHODS ====================
     
-    // Select table from available tables
-    public static Table selectTable(ArrayList<Table> tables, Scanner scanner) {
-        System.out.println("\n" + "=".repeat(60));
-        System.out.println("                  AVAILABLE TABLES");
-        System.out.println("=".repeat(60));
+    //  Select table with capacity check
+    public static Table selectTableForCapacity(ArrayList<Table> tables, Scanner scanner, int numberOfPeople) {
+        ArrayList<Table> available = getAvailableTables(tables);
+        ArrayList<Table> suitableTables = new ArrayList<>();
         
-        ArrayList<Table> availableTables = new ArrayList<>();
-
-        for (Table table : tables) {
-            if (table.isAvailable()) {
-                availableTables.add(table);
-                System.out.println(availableTables.size() + ". " + table.toString());
+        for (Table table : available) {
+            if (table.getCapacity() >= numberOfPeople) {
+                suitableTables.add(table);
             }
         }
-
-        if (availableTables.isEmpty()) {
-            System.out.println(" No available tables!");
+        System.out.println("\n" + "=".repeat(60));
+        System.out.println("      AVAILABLE TABLES FOR " + numberOfPeople + " PEOPLE");
+        System.out.println("=".repeat(60));
+        
+         
+        if (suitableTables.isEmpty()) {
+            System.out.println(" No available tables for " + numberOfPeople + " people!");
+            
+            System.out.println("   Wait for a table to become available");
+           
+            
             return null;
         }
-
+        
+        for (int i = 0; i < suitableTables.size(); i++) {
+            Table table = suitableTables.get(i);
+            System.out.println((i + 1) + ". " + table.toString() + 
+                             " (Fits " + numberOfPeople + " people)");
+        }
+        
         System.out.print("\nSelect table number: ");
         try {
             int choice = scanner.nextInt();
             scanner.nextLine();
 
-            if (choice < 1 || choice > availableTables.size()) {
+            if (choice < 1 || choice > suitableTables.size()) {
                 System.out.println(" Invalid choice!");
                 return null;
             }
 
-            Table selected = availableTables.get(choice - 1);
+            Table selected = suitableTables.get(choice - 1);
             selected.assignTable();
             return selected;
         } catch (InputMismatchException e) {
