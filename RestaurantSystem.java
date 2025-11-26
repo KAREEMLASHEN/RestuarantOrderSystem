@@ -2,30 +2,11 @@ package restaurantsystem;
 
 import java.util.*;
 
-/**
- * Restaurant System - Main Class
- */
 public class RestaurantSystem {
-    private static ArrayList<Customer> customers = new ArrayList<>();
-    private static ArrayList<Cashier> cashiers = new ArrayList<>();
-    private static Menu menu = new Menu();
-    private static ArrayList<Table> tables = new ArrayList<>();
-    private static ArrayList<Order> orders = new ArrayList<>();
-    private static Scanner scanner = new Scanner(System.in);
-
-    public static void main(String[] args) {
-        initializeSystem();
-        
-        System.out.println("================================");
-        System.out.println("   WELCOME TO RESTAURANT SYSTEM");
-        System.out.println("================================\n");
-        
-        mainMenu();
-    }
     
-    // ==================== INITIALIZATION ====================
-    
-    private static void initializeSystem() {
+    private static void initializeSystem(Menu menu, ArrayList<Table> tables,
+                                        ArrayList<Cashier> cashiers,
+                                        ArrayList<Delivery> deliveryPersons) {
         menu.addItem(new MenuItem("Burger", "Beef burger with cheese", 80.0, "Main", true));
         menu.addItem(new MenuItem("Pizza", "Margherita pizza", 120.0, "Main", true));
         menu.addItem(new MenuItem("Pasta", "Creamy pasta with chicken", 95.0, "Main", true));
@@ -33,8 +14,14 @@ public class RestaurantSystem {
         menu.addItem(new MenuItem("Cola", "Soft drink", 20.0, "Beverage", true));
         menu.addItem(new MenuItem("Juice", "Fresh orange juice", 30.0, "Beverage", true));
         
-        for (int i = 1; i <= 10; i++) {
+        for (int i = 1; i <= 3; i++) {
+            tables.add(new Table(i, 2, Table.TableStatus.AVAILABLE));
+        }
+        for (int i = 4; i <= 6; i++) {
             tables.add(new Table(i, 4, Table.TableStatus.AVAILABLE));
+        }
+        for (int i = 7; i <= 10; i++) {
+            tables.add(new Table(i, 6, Table.TableStatus.AVAILABLE));
         }
         
         cashiers.add(new Cashier("Ahmed Ali", "ahmed@restaurant.com", "0123456789", 
@@ -42,201 +29,179 @@ public class RestaurantSystem {
         cashiers.add(new Cashier("Sara Mohamed", "sara@restaurant.com", "0111222333", 
                                 "cash456", 5000, "Evening"));
         
-        System.out.println(" System initialized successfully!");
-        System.out.println("\n Sample Cashier Logins:");
+        deliveryPersons.add(new Delivery("Mahmoud Hassan", "mahmoud@restaurant.com", 
+                                         "0100111222", "delivery123"));
+        deliveryPersons.add(new Delivery("Ali Ahmed", "ali@restaurant.com", 
+                                         "0122333444", "delivery456"));
+        
+        System.out.println("System initialized successfully!");
+        System.out.println("\nSample Logins:");
+        System.out.println("Cashiers:");
         for (Cashier c : cashiers) {
             System.out.println("  - ID: " + c.getId() + " | Password: " + c.getPassword());
         }
-        System.out.println();
+        System.out.println("Delivery Persons:");
+        for (Delivery d : deliveryPersons) {
+            System.out.println("  - ID: " + d.getId() + " | Password: " + d.getPassword());
+        }
     }
     
-    // ==================== MAIN MENU ====================
-    
-    private static void mainMenu() {
-        while (true) {
-            System.out.println("\n========== MAIN MENU ==========");
-            System.out.println("1.  Register (New Customer)");
-            System.out.println("2.  Login");
-            System.out.println("3.  View Menu");
-            System.out.println("4.  Exit");
+    private static void editOrder(Order order, Menu menu, Customer customer, Scanner scanner) {
+        boolean editing = true;
+        
+        while (editing) {
+            System.out.println("\n========== EDIT ORDER ==========");
+            System.out.println("Current Total: EGP " + String.format("%.2f", order.getTotal()));
+            
+            System.out.println("\nCurrent Items:");
+            int index = 1;
+            for (Map.Entry<MenuItem, Integer> entry : order.getItems().entrySet()) {
+                System.out.println(index + ". " + entry.getKey().getName() + 
+                                 " x" + entry.getValue() + 
+                                 " - EGP " + String.format("%.2f", 
+                                 entry.getKey().getPrice() * entry.getValue()));
+                index++;
+            }
+            
+            System.out.println("\n1. Add Item");
+            System.out.println("2. Remove Item");
+            System.out.println("3. Update Quantity");
+            System.out.println("4. Done Editing");
             System.out.println("================================");
             System.out.print("Choose an option: ");
             
-            int choice = getIntInput();
+            int choice = -1;
+            try {
+                choice = scanner.nextInt();
+                scanner.nextLine();
+            } catch (InputMismatchException e) {
+                System.out.println("Invalid input!");
+                scanner.nextLine();
+                continue;
+            }
             
-            switch (choice) {
-                case 1 -> Customer.registerCustomer(customers, scanner);
-                case 2 -> login();
-                case 3 -> menu.displayMenu();
-                case 4 -> {
-                    System.out.println("Thank you for using our system!");
-                    System.exit(0);
+            if (choice == 1) {
+                System.out.println("\n=== ADD ITEMS ===");
+                Map<MenuItem, Integer> newItems = menu.selectMenuItems(scanner);
+                
+                if (!newItems.isEmpty()) {
+                    for (Map.Entry<MenuItem, Integer> entry : newItems.entrySet()) {
+                        order.addItem(entry.getKey(), entry.getValue());
+                    }
+                    order.calculateSubtotal();
+                    order.applyEliteDiscount(customer.isEliteCustomer(), customer.isSubscriptionActive());
+                    order.calculateTotal();
+                    System.out.println("\nItems added successfully!");
                 }
-                default -> System.out.println(" Invalid choice!");
-            }
-        }
-    }
-    
-    // ==================== LOGIN ====================
-    
-    private static void login() {
-        System.out.println("\n=== LOGIN ===");
-        System.out.print("Enter your ID (CUST### or CH###): ");
-        String id = scanner.nextLine();
-        
-        System.out.print("Enter password: ");
-        String password = scanner.nextLine();
-        
-        if (id.toUpperCase().startsWith("CUST")) {
-            Customer customer = Customer.findCustomer(id, customers);
-            if (customer != null && customer.login(id, password)) {
-                customer.customerMenu(menu, tables, scanner);
-            } else {
-                System.out.println(" Login failed! Invalid credentials.");
-            }
-        } else if (id.toUpperCase().startsWith("CH")) {
-            Cashier cashier = Cashier.findCashier(id, cashiers);
-            if (cashier != null && cashier.login(id, password)) {
-                cashierMenu(cashier);
-            } else {
-                System.out.println(" Login failed! Invalid credentials.");
-            }
-        } else {
-            System.out.println(" Invalid ID format!");
-        }
-    }
-    
-    // ==================== CASHIER MENU ====================
-    
-private static void cashierMenu(Cashier cashier) {
-        while (true) {
-            System.out.println("\n========== CASHIER MENU ==========");
-            System.out.println("Hello, " + cashier.getName() + "!");
-            System.out.println("===================================");
-            System.out.println("1.  Process Takeaway Order");
-            System.out.println("2.  Process Dine-In Order");
-            System.out.println("3.  View All Tables");
-            System.out.println("4.  Release Table");
-            System.out.println("5.  View Profile");
-            System.out.println("6.  View Menu");
-            System.out.println("7.  Logout");
-            System.out.println("===================================");
-            System.out.print("Choose an option: ");
-            
-            int choice = getIntInput();
-            
-            switch (choice) {
-                case 1 -> processTakeaway(cashier);
-                case 2 -> processDineIn(cashier);
-                case 3 -> viewTables();
-                case 4 -> releaseTable();
-                case 5 -> System.out.println(cashier.getDetails());
-                case 6 -> menu.displayMenu();
-                case 7 -> {
-                    System.out.println(" Logged out successfully!");
-                    return;
+                
+            } else if (choice == 2) {
+                System.out.println("\n=== REMOVE ITEM ===");
+                
+                if (order.getItems().isEmpty()) {
+                    System.out.println("No items in order!");
+                    continue;
                 }
-                default -> System.out.println(" Invalid choice!");
+                
+                ArrayList<MenuItem> itemList = new ArrayList<>(order.getItems().keySet());
+                
+                System.out.println("\nSelect item to remove:");
+                for (int i = 0; i < itemList.size(); i++) {
+                    MenuItem item = itemList.get(i);
+                    int qty = order.getItems().get(item);
+                    System.out.println((i + 1) + ". " + item.getName() + " x" + qty);
+                }
+                
+                System.out.print("\nItem number (0 to cancel): ");
+                int itemChoice = -1;
+                try {
+                    itemChoice = scanner.nextInt();
+                    scanner.nextLine();
+                } catch (InputMismatchException e) {
+                    System.out.println("Invalid input!");
+                    scanner.nextLine();
+                    continue;
+                }
+                
+                if (itemChoice > 0 && itemChoice <= itemList.size()) {
+                    order.removeItem(itemList.get(itemChoice - 1));
+                    order.calculateSubtotal();
+                    order.applyEliteDiscount(customer.isEliteCustomer(), customer.isSubscriptionActive());
+                    order.calculateTotal();
+                } else if (itemChoice != 0) {
+                    System.out.println("Invalid selection!");
+                }
+                
+            } else if (choice == 3) {
+                System.out.println("\n=== UPDATE QUANTITY ===");
+                
+                if (order.getItems().isEmpty()) {
+                    System.out.println("No items in order!");
+                    continue;
+                }
+                
+                ArrayList<MenuItem> itemList = new ArrayList<>(order.getItems().keySet());
+                
+                System.out.println("\nSelect item to update:");
+                for (int i = 0; i < itemList.size(); i++) {
+                    MenuItem item = itemList.get(i);
+                    int qty = order.getItems().get(item);
+                    System.out.println((i + 1) + ". " + item.getName() + " (Current: x" + qty + ")");
+                }
+                
+                System.out.print("\nItem number (0 to cancel): ");
+                int itemChoice = -1;
+                try {
+                    itemChoice = scanner.nextInt();
+                    scanner.nextLine();
+                } catch (InputMismatchException e) {
+                    System.out.println("Invalid input!");
+                    scanner.nextLine();
+                    continue;
+                }
+                
+                if (itemChoice > 0 && itemChoice <= itemList.size()) {
+                    System.out.print("Enter new quantity: ");
+                    int newQty = -1;
+                    try {
+                        newQty = scanner.nextInt();
+                        scanner.nextLine();
+                    } catch (InputMismatchException e) {
+                        System.out.println("Invalid input!");
+                        scanner.nextLine();
+                        continue;
+                    }
+                    
+                    if (newQty > 0) {
+                        order.updateQuantity(itemList.get(itemChoice - 1), newQty);
+                        order.calculateSubtotal();
+                        order.applyEliteDiscount(customer.isEliteCustomer(), customer.isSubscriptionActive());
+                        order.calculateTotal();
+                    } else {
+                        System.out.println("Quantity must be greater than 0!");
+                    }
+                } else if (itemChoice != 0) {
+                    System.out.println("Invalid selection!");
+                }
+                
+            } else if (choice == 4) {
+                if (order.getItems().isEmpty()) {
+                    System.out.println("\nWarning: Order is empty!");
+                    System.out.print("Continue anyway? (y/n): ");
+                    String confirm = scanner.nextLine();
+                    if (confirm.equalsIgnoreCase("y")) {
+                        editing = false;
+                    }
+                } else {
+                    System.out.println("\nOrder editing complete!");
+                    editing = false;
+                }
+            } else {
+                System.out.println("Invalid choice!");
             }
         }
     }
     
-    private static void processTakeaway(Cashier cashier) {
-        System.out.println("\n=== PROCESS TAKEAWAY ORDER ===");
-        
-        System.out.print("Enter customer ID (or 0 for walk-in): ");
-        String custId = scanner.nextLine();
-        
-        Customer customer = getOrCreateCustomer(custId);
-        if (customer == null) return;
-        
-        Map<MenuItem, Integer> items = menu.selectMenuItems(scanner);
-        if (items.isEmpty()) {
-            System.out.println(" No items selected!");
-            return;
-        }
-        
-        Order order = cashier.processTakeawayOrder(customer, items);
-        orders.add(order);
-        cashier.printReceipt(order);
-        
-        processPayment(order, cashier);
-    }
-    
-    private static void processDineIn(Cashier cashier) {
-        System.out.println("\n=== PROCESS DINE-IN ORDER ===");
-        
-        System.out.print("Enter customer ID (or 0 for walk-in): ");
-        String custId = scanner.nextLine();
-        
-        Customer customer = getOrCreateCustomer(custId);
-        if (customer == null) return;
-        
-        Table table = Table.selectTable(tables, scanner);
-        if (table == null) {
-            System.out.println(" No available tables!");
-            return;
-        }
-        
-        Map<MenuItem, Integer> items = menu.selectMenuItems(scanner);
-        if (items.isEmpty()) {
-            System.out.println(" No items selected!");
-            table.releaseTable();
-            return;
-        }
-        
-        Order order = cashier.processWalkInOrder(customer, items, table);
-        orders.add(order);
-        cashier.printReceipt(order);
-        
-        processPayment(order, cashier);
-        
-        System.out.print("\n Has customer finished? Release table now? (y/n): ");
-        String release = scanner.nextLine();
-        if (release.equalsIgnoreCase("y")) {
-            table.releaseTable();
-            System.out.println(" Table #" + table.getTableNumber() + " is now available!");
-        }
-    }
-    
-    private static void viewTables() {
-        System.out.println("\n========== ALL TABLES ==========");
-        for (Table table : tables) {
-            System.out.println(table);
-        }
-    }
-    
-    private static void releaseTable() {
-        System.out.println("\n========== RELEASE TABLE ==========");
-        
-        ArrayList<Table> occupied = new ArrayList<>();
-        for (Table table : tables) {
-            if (!table.isAvailable()) {
-                occupied.add(table);
-            }
-        }
-        
-        if (occupied.isEmpty()) {
-            System.out.println(" All tables are available!");
-            return;
-        }
-        
-        System.out.println("Occupied Tables:");
-        for (int i = 0; i < occupied.size(); i++) {
-            System.out.println((i + 1) + ". " + occupied.get(i));
-        }
-        
-        System.out.print("\nSelect table to release (0 to cancel): ");
-        int choice = getIntInput();
-        
-        if (choice > 0 && choice <= occupied.size()) {
-            Table table = occupied.get(choice - 1);
-            table.releaseTable();
-            System.out.println(" Table released!");
-        }
-    }
-    
-    private static void processPayment(Order order, Cashier cashier) {
+    private static void processPayment(Order order, Scanner scanner) {
         System.out.println("\n--- PAYMENT ---");
         System.out.println("Total: EGP " + order.getTotal());
         System.out.println("Select payment method:");
@@ -246,70 +211,479 @@ private static void cashierMenu(Cashier cashier) {
         System.out.println("4. Mobile Wallet");
         System.out.print("Choice: ");
         
-        int choice = getIntInput();
-        
-        Payment.PaymentMethod method;
-        switch (choice) {
-            case 1 -> method = Payment.PaymentMethod.CASH;
-            case 2 -> method = Payment.PaymentMethod.CREDIT_CARD;
-            case 3 -> method = Payment.PaymentMethod.DEBIT_CARD;
-            case 4 -> method = Payment.PaymentMethod.MOBILE_WALLET;
-            default -> method = Payment.PaymentMethod.CASH;
+        int payChoice = -1;
+        try {
+            payChoice = scanner.nextInt();
+            scanner.nextLine();
+        } catch (InputMismatchException e) {
+            scanner.nextLine();
+            payChoice = 1;
         }
+        
+        Payment.PaymentMethod method = switch (payChoice) {
+            case 2 -> Payment.PaymentMethod.CREDIT_CARD;
+            case 3 -> Payment.PaymentMethod.DEBIT_CARD;
+            case 4 -> Payment.PaymentMethod.MOBILE_WALLET;
+            default -> Payment.PaymentMethod.CASH;
+        };
         
         System.out.print("Enter payment amount: EGP ");
-        double amount = getDoubleInput();
+        double amount = order.getTotal();
+        try {
+            amount = scanner.nextDouble();
+            scanner.nextLine();
+        } catch (InputMismatchException e) {
+            scanner.nextLine();
+        }
         
-        cashier.acceptPayment(order, amount, method);
-    }
-    
-    // ==================== HELPER METHODS ====================
-    
-    private static Customer getOrCreateCustomer(String custId) {
-        if (custId.equals("0")) {
-            System.out.print("Customer name: ");
-            String name = scanner.nextLine();
-            Address tempAddr = new Address(0, "Walk-in", true);
-            return new Customer("guest", "guest", false, tempAddr, name, "n/a", "n/a");
+        Payment payment = new Payment(amount, method, order.getOrderId());
+        if (payment.processPayment(order.getTotal())) {
+            order.setPayment(payment);
+            order.updateStatus(Status.COMPLETE);
         } else {
-            return Customer.findCustomer(custId, customers);
+            order.updateStatus(Status.FAILED);
         }
     }
     
-    public static Menu getMenu() {
-        return menu;
-    }
-    
-    public static ArrayList<Table> getTables() {
-        return tables;
-    }
-    
-    public static ArrayList<Order> getOrders() {
-        return orders;
-    }
-    
-    private static int getIntInput() {
+    public static void main(String[] args) {
+        ArrayList<Customer> customers = new ArrayList<>();
+        ArrayList<Cashier> cashiers = new ArrayList<>();
+        ArrayList<Delivery> deliveryPersons = new ArrayList<>();
+        Menu menu = new Menu();
+        ArrayList<Table> tables = new ArrayList<>();
+        ArrayList<Order> orders = new ArrayList<>();
+        Scanner scanner = new Scanner(System.in);
+        
+        System.out.println("================================");
+        System.out.println("   WELCOME TO RESTAURANT SYSTEM");
+        System.out.println("================================\n");
+        
+        if (DataManager.dataExists()) {
+            DataManager.loadAllData(customers, cashiers, deliveryPersons, orders, menu, tables);
+        } else {
+            initializeSystem(menu, tables, cashiers, deliveryPersons);
+        }
+        
         while (true) {
+            System.out.println("\n========== MAIN MENU ==========");
+            System.out.println("1. Register (New Customer)");
+            System.out.println("2. Login");
+            System.out.println("3. View Menu");
+            System.out.println("4. Exit");
+            System.out.println("================================");
+            System.out.print("Choose an option: ");
+            
+            int mainChoice = -1;
             try {
-                int value = scanner.nextInt();
+                mainChoice = scanner.nextInt();
                 scanner.nextLine();
-                return value;
             } catch (InputMismatchException e) {
-                System.out.print(" Invalid input! Enter a number: ");
+                System.out.println("Invalid input!");
                 scanner.nextLine();
+                continue;
             }
-        }
-    }
-    
-    private static double getDoubleInput() {
-        while (true) {
-            try {
-                double value = scanner.nextDouble();
-                scanner.nextLine();
-                return value;
-            } catch (InputMismatchException e) {
-                System.out.print(" Invalid input! Enter a number: ");
-                scanner.nextLine();
+            
+            if (mainChoice == 1) {
+                Customer.registerCustomer(customers, scanner);
+                DataManager.saveAllDataSilent(customers, cashiers, deliveryPersons, orders, menu, tables);
+                
+            } else if (mainChoice == 2) {
+                System.out.println("\n=== LOGIN ===");
+                System.out.print("Enter your ID (CUST### / CH### / DP###): ");
+                String id = scanner.nextLine();
+                System.out.print("Enter password: ");
+                String password = scanner.nextLine();
+                
+                if (id.toUpperCase().startsWith("CUST")) {
+                    Customer customer = Customer.findCustomer(id, customers);
+                    if (customer != null && customer.login(id, password)) {
+                        boolean customerLoggedIn = true;
+                        while (customerLoggedIn) {
+                            System.out.println("\n========== CUSTOMER MENU ==========");
+                            System.out.println("Hello, " + customer.getName() + "!");
+                            System.out.println("====================================");
+                            System.out.println("1. Online Delivery");
+                            System.out.println("2. View Profile");
+                            System.out.println("3. Subscribe to Elite");
+                            System.out.println("4. Logout");
+                            System.out.println("====================================");
+                            System.out.print("Choose an option: ");
+                            
+                            int custChoice = -1;
+                            try {
+                                custChoice = scanner.nextInt();
+                                scanner.nextLine();
+                            } catch (InputMismatchException e) {
+                                System.out.println("Invalid input!");
+                                scanner.nextLine();
+                                continue;
+                            }
+                            
+                            if (custChoice == 1) {
+                                System.out.println("\n=== ONLINE DELIVERY ORDER ===");
+                                System.out.println("Delivery Address: " + customer.getAddress().getFullAddress());
+                                System.out.print("Use this address? (y/n): ");
+                                String confirm = scanner.nextLine();
+                                
+                                Address deliveryAddress = customer.getAddress();
+                                if (confirm.equalsIgnoreCase("n")) {
+                                    System.out.print("Enter new address: ");
+                                    String newAddr = scanner.nextLine();
+                                    deliveryAddress = new Address(2, newAddr, false);
+                                }
+                                
+                                String testZone = Delivery.determineZone(deliveryAddress);
+                                if (testZone == null) {
+                                    System.out.println("\n================================");
+                                    System.out.println("      ORDER CANCELLED");
+                                    System.out.println("================================");
+                                    System.out.println("Delivery is not available for this address.");
+                                    System.out.println("Please try a different address or use another order type.");
+                                    System.out.println("================================\n");
+                                    continue;
+                                }
+                                
+                                System.out.println("\nDelivery Zone: " + Delivery.getZoneName(testZone));
+                                System.out.println("Delivery Fee: EGP " + String.format("%.2f", Delivery.getBaseFee(testZone)));
+                                System.out.println("Estimated Time: " + Delivery.getDeliveryTimeMinutes(testZone) + " minutes");
+                                
+                                Map<MenuItem, Integer> items = menu.selectMenuItems(scanner);
+                                if (items.isEmpty()) {
+                                    System.out.println("No items selected!");
+                                    continue;
+                                }
+                                
+                                Order order = new Order(customer.getCustomerId(), items, 
+                                                       Systemmode.ONLINE_DELIVERY, deliveryAddress);
+                                
+                                if (order.getStatus() == Status.CANCELLED) {
+                                    System.out.println("\n================================");
+                                    System.out.println("      ORDER CANCELLED");
+                                    System.out.println("================================");
+                                    System.out.println("Delivery is not available for this address.");
+                                    System.out.println("================================\n");
+                                    continue;
+                                }
+                                
+                                order.calculateSubtotal();
+                                order.applyEliteDiscount(customer.isEliteCustomer(), customer.isSubscriptionActive());
+                                order.calculateTotal();
+                                System.out.println(order.getOrderSummary());
+                                
+                                System.out.print("\nWould you like to edit this order before payment? (y/n): ");
+                                String editChoice = scanner.nextLine();
+                                
+                                if (editChoice.equalsIgnoreCase("y")) {
+                                    editOrder(order, menu, customer, scanner);
+                                    System.out.println("\n=== UPDATED ORDER ===");
+                                    System.out.println(order.getOrderSummary());
+                                }
+                                
+                                processPayment(order, scanner);
+                                
+                                if (order.getStatus() == Status.COMPLETE) {
+                                    orders.add(order);
+                                    
+                                    Delivery availableDelivery = null;
+                                    for (Delivery d : deliveryPersons) {
+                                        if (d.isAvailable()) {
+                                            availableDelivery = d;
+                                            break;
+                                        }
+                                    }
+                                    
+                                    if (availableDelivery != null) {
+                                        if (availableDelivery.acceptOrder(order)) {
+                                            order.assignDeliveryPerson(availableDelivery);
+                                            System.out.println("\nOrder will be delivered by: " + availableDelivery.getName());
+                                            System.out.println("Phone: " + availableDelivery.getPhoneNumber());
+                                        }
+                                    } else {
+                                        System.out.println("\nNo delivery person available at the moment.");
+                                        System.out.println("Order will be assigned soon.");
+                                    }
+                                    
+                                    System.out.println("\nOrder placed successfully!");
+                                    System.out.println("Order ID: " + order.getOrderId());
+                                    DataManager.saveAllDataSilent(customers, cashiers, deliveryPersons, orders, menu, tables);
+                                }
+                                
+                            } else if (custChoice == 2) {
+                                System.out.println(customer.getDetails());
+                            } else if (custChoice == 3) {
+                                customer.subscribeElite(scanner);
+                            } else if (custChoice == 4) {
+                                System.out.println("Logged out!");
+                                customerLoggedIn = false;
+                            } else {
+                                System.out.println("Invalid choice!");
+                            }
+                        }
+                        DataManager.saveAllDataSilent(customers, cashiers, deliveryPersons, orders, menu, tables);
+                    } else {
+                        System.out.println("Login failed! Invalid credentials.");
+                    }
+                    
+                } else if (id.toUpperCase().startsWith("CH")) {
+                    Cashier cashier = Cashier.findCashier(id, cashiers);
+                    if (cashier != null && cashier.login(id, password)) {
+                        boolean cashierLoggedIn = true;
+                        while (cashierLoggedIn) {
+                            System.out.println("\n========== CASHIER MENU ==========");
+                            System.out.println("Hello, " + cashier.getName() + "!");
+                            System.out.println("===================================");
+                            System.out.println("1. Process Takeaway Order");
+                            System.out.println("2. Process Dine-In Order");
+                            System.out.println("3. View All Tables");
+                            System.out.println("4. Release Table");
+                            System.out.println("5. View Profile");
+                            System.out.println("6. View Menu");
+                            System.out.println("7. Logout");
+                            System.out.println("===================================");
+                            System.out.print("Choose an option: ");
+                            
+                            int cashChoice = -1;
+                            try {
+                                cashChoice = scanner.nextInt();
+                                scanner.nextLine();
+                            } catch (InputMismatchException e) {
+                                System.out.println("Invalid input!");
+                                scanner.nextLine();
+                                continue;
+                            }
+                            
+                            if (cashChoice == 1) {
+                                System.out.println("\n=== PROCESS TAKEAWAY ORDER ===");
+                                System.out.print("Enter customer ID (or 0 for walk-in): ");
+                                String custId = scanner.nextLine();
+                                
+                                Customer customer = null;
+                                if (custId.equals("0")) {
+                                    System.out.print("Customer name: ");
+                                    String name = scanner.nextLine();
+                                    Address tempAddr = new Address(0, "Walk-in", true);
+                                    customer = new Customer("guest", false, tempAddr, name, "n/a", "n/a");
+                                } else {
+                                    customer = Customer.findCustomer(custId, customers);
+                                }
+                                
+                                if (customer == null) {
+                                    System.out.println("Customer not found!");
+                                    continue;
+                                }
+                                
+                                Map<MenuItem, Integer> items = menu.selectMenuItems(scanner);
+                                if (items.isEmpty()) {
+                                    System.out.println("No items selected!");
+                                    continue;
+                                }
+                                
+                                Order order = cashier.processTakeawayOrder(customer, items);
+                                
+                                System.out.print("\nWould you like to edit this order before payment? (y/n): ");
+                                String editChoice = scanner.nextLine();
+                                
+                                if (editChoice.equalsIgnoreCase("y")) {
+                                    editOrder(order, menu, customer, scanner);
+                                    order.calculateSubtotal();
+                                    order.applyEliteDiscount(customer.isEliteCustomer(), customer.isSubscriptionActive());
+                                    order.calculateTotal();
+                                    System.out.println("\n=== UPDATED ORDER ===");
+                                    cashier.printReceipt(order);
+                                } else {
+                                    cashier.printReceipt(order);
+                                }
+                                
+                                orders.add(order);
+                                processPayment(order, scanner);
+                                cashier.acceptPayment(order, order.getTotal(), order.getPayment().getPaymentMethod());
+                                DataManager.saveAllDataSilent(customers, cashiers, deliveryPersons, orders, menu, tables);
+                                
+                            } else if (cashChoice == 2) {
+                                System.out.println("\n=== PROCESS DINE-IN ORDER ===");
+                                System.out.print("Enter customer ID (or 0 for walk-in): ");
+                                String custId = scanner.nextLine();
+                                
+                                Customer customer = null;
+                                if (custId.equals("0")) {
+                                    System.out.print("Customer name: ");
+                                    String name = scanner.nextLine();
+                                    Address tempAddr = new Address(0, "Walk-in", true);
+                                    customer = new Customer("guest", false, tempAddr, name, "n/a", "n/a");
+                                } else {
+                                    customer = Customer.findCustomer(custId, customers);
+                                }
+                                
+                                if (customer == null) {
+                                    System.out.println("Customer not found!");
+                                    continue;
+                                }
+                                
+                                Map<MenuItem, Integer> items = menu.selectMenuItems(scanner);
+                                if (items.isEmpty()) {
+                                    System.out.println("No items selected!");
+                                    continue;
+                                }
+                                
+                                Order order = cashier.processWalkInOrder(customer, items, tables, scanner);
+                                
+                                if (order != null) {
+                                    System.out.print("\nWould you like to edit this order before payment? (y/n): ");
+                                    String editChoice = scanner.nextLine();
+                                    
+                                    if (editChoice.equalsIgnoreCase("y")) {
+                                        editOrder(order, menu, customer, scanner);
+                                        order.calculateSubtotal();
+                                        order.applyEliteDiscount(customer.isEliteCustomer(), customer.isSubscriptionActive());
+                                        order.calculateTotal();
+                                        System.out.println("\n=== UPDATED ORDER ===");
+                                        cashier.printReceipt(order);
+                                    } else {
+                                        cashier.printReceipt(order);
+                                    }
+                                    
+                                    orders.add(order);
+                                    processPayment(order, scanner);
+                                    cashier.acceptPayment(order, order.getTotal(), order.getPayment().getPaymentMethod());
+                                    
+                                    System.out.print("\nHas customer finished? Release table now? (y/n): ");
+                                    String release = scanner.nextLine();
+                                    if (release.equalsIgnoreCase("y")) {
+                                        order.getTable().releaseTable();
+                                    }
+                                    
+                                    DataManager.saveAllDataSilent(customers, cashiers, deliveryPersons, orders, menu, tables);
+                                }
+                                
+                            } else if (cashChoice == 3) {
+                                System.out.println("\n========== ALL TABLES ==========");
+                                for (Table table : tables) {
+                                    System.out.println(table);
+                                }
+                            } else if (cashChoice == 4) {
+                                System.out.println("\n========== RELEASE TABLE ==========");
+                                ArrayList<Table> occupied = new ArrayList<>();
+                                for (Table table : tables) {
+                                    if (!table.isAvailable()) {
+                                        occupied.add(table);
+                                    }
+                                }
+                                
+                                if (occupied.isEmpty()) {
+                                    System.out.println("All tables are available!");
+                                    continue;
+                                }
+                                
+                                System.out.println("Occupied Tables:");
+                                for (int i = 0; i < occupied.size(); i++) {
+                                    System.out.println((i + 1) + ". " + occupied.get(i));
+                                }
+                                
+                                System.out.print("\nSelect table to release (0 to cancel): ");
+                                int tChoice = -1;
+                                try {
+                                    tChoice = scanner.nextInt();
+                                    scanner.nextLine();
+                                } catch (InputMismatchException e) {
+                                    scanner.nextLine();
+                                    continue;
+                                }
+                                
+                                if (tChoice > 0 && tChoice <= occupied.size()) {
+                                    occupied.get(tChoice - 1).releaseTable();
+                                    DataManager.saveAllDataSilent(customers, cashiers, deliveryPersons, orders, menu, tables);
+                                }
+                            } else if (cashChoice == 5) {
+                                System.out.println(cashier.getDetails());
+                            } else if (cashChoice == 6) {
+                                menu.displayMenu();
+                            } else if (cashChoice == 7) {
+                                System.out.println("Logged out successfully!");
+                                cashierLoggedIn = false;
+                            } else {
+                                System.out.println("Invalid choice!");
+                            }
+                        }
+                        DataManager.saveAllDataSilent(customers, cashiers, deliveryPersons, orders, menu, tables);
+                    } else {
+                        System.out.println("Login failed! Invalid credentials.");
+                    }
+                    
+                } else if (id.toUpperCase().startsWith("DP")) {
+                    Delivery delivery = null;
+                    for (Delivery d : deliveryPersons) {
+                        if (d.getId().equalsIgnoreCase(id)) {
+                            delivery = d;
+                            break;
+                        }
+                    }
+                    
+                    if (delivery != null && delivery.login(id, password)) {
+                        boolean deliveryLoggedIn = true;
+                        while (deliveryLoggedIn) {
+                            System.out.println("\n========== DELIVERY MENU ==========");
+                            System.out.println("Hello, " + delivery.getName() + "!");
+                            System.out.println("====================================");
+                            System.out.println("1. View Current Order");
+                            System.out.println("2. Pickup Order");
+                            System.out.println("3. Start Delivery");
+                            System.out.println("4. Complete Delivery");
+                            System.out.println("5. View Statistics");
+                            System.out.println("6. View Profile");
+                            System.out.println("7. Logout");
+                            System.out.println("====================================");
+                            System.out.print("Choose an option: ");
+                            
+                            int delChoice = -1;
+                            try {
+                                delChoice = scanner.nextInt();
+                                scanner.nextLine();
+                            } catch (InputMismatchException e) {
+                                System.out.println("Invalid input!");
+                                scanner.nextLine();
+                                continue;
+                            }
+                            
+                            if (delChoice == 1) {
+                                System.out.println(delivery.getCurrentDeliveryInfo());
+                            } else if (delChoice == 2) {
+                                delivery.pickupOrder();
+                                DataManager.saveAllDataSilent(customers, cashiers, deliveryPersons, orders, menu, tables);
+                            } else if (delChoice == 3) {
+                                delivery.startDelivery();
+                                DataManager.saveAllDataSilent(customers, cashiers, deliveryPersons, orders, menu, tables);
+                            } else if (delChoice == 4) {
+                                delivery.completeDelivery();
+                                DataManager.saveAllDataSilent(customers, cashiers, deliveryPersons, orders, menu, tables);
+                            } else if (delChoice == 5) {
+                                System.out.println(delivery.getStatistics());
+                            } else if (delChoice == 6) {
+                                System.out.println(delivery.getDetails());
+                            } else if (delChoice == 7) {
+                                System.out.println("Logged out!");
+                                deliveryLoggedIn = false;
+                            } else {
+                                System.out.println("Invalid choice!");
+                            }
+                        }
+                        DataManager.saveAllDataSilent(customers, cashiers, deliveryPersons, orders, menu, tables);
+                    } else {
+                        System.out.println("Login failed! Invalid credentials.");
+                    }
+                    
+                } else {
+                    System.out.println("Invalid ID format!");
+                }
+                
+            } else if (mainChoice == 3) {
+                menu.displayMenu();
+            } else if (mainChoice == 4) {
+                DataManager.saveAllData(customers, cashiers, deliveryPersons, orders, menu, tables);
+                System.out.println("Thank you for using our system!");
+                scanner.close();
+                System.exit(0);
+            } else {
+                System.out.println("Invalid choice!");
             }
         }
     }
