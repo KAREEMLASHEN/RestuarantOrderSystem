@@ -17,7 +17,6 @@ public class Cashier extends Person {
         this.shift = shift;
     }
 
-    // Getters and Setters
     public String getEmployeeId() { return id; }
     public double getSalary() { return salary; }
     public void setSalary(double salary) { this.salary = salary; }
@@ -26,10 +25,6 @@ public class Cashier extends Person {
     public Table getAssignedTable() { return assignedTable; }
     public void setAssignedTable(Table assignedTable) { this.assignedTable = assignedTable; }
     
-    // ==================== STATIC METHODS ====================
-    
-    // Find cashier by ID
-     
     public static Cashier findCashier(String id, ArrayList<Cashier> cashiers) {
         for (Cashier c : cashiers) {
             if (c.getEmployeeId().equalsIgnoreCase(id)) {
@@ -38,8 +33,6 @@ public class Cashier extends Person {
         }
         return null;
     }
-    
-    // ==================== INSTANCE METHODS ====================
     
     @Override
     public boolean login(String inputId, String inputPassword) {
@@ -51,13 +44,12 @@ public class Cashier extends Person {
         return false;
     }
 
-    //Process Takeaway Order
     public Order processTakeawayOrder(Customer customer, Map<MenuItem, Integer> items) {
         System.out.println("\n=== PROCESSING TAKEAWAY ORDER ===");
         System.out.println(" Cashier: " + getName());
         System.out.println(" Customer: " + customer.getName());
 
-        Order order = new Order(customer.getCustomerId(), items, Systemmode.TAKEAWAY, null);
+        Order order = new Order(customer.getCustomerId(), items, Systemmode.TAKEAWAY, (Table) null);
         order.calculateSubtotal();
         order.applyEliteDiscount(customer.isEliteCustomer(), customer.isSubscriptionActive());
         order.calculateTotal();
@@ -70,29 +62,53 @@ public class Cashier extends Person {
         return order;
     }
 
-    // Process Walk-In (Dine-In) Order
-     
-    public Order processWalkInOrder(Customer customer, Map<MenuItem, Integer> items, Table table) {
+    public Order processWalkInOrder(Customer customer, Map<MenuItem, Integer> items, 
+                               ArrayList<Table> tables, Scanner scanner) {
         System.out.println("\n=== PROCESSING DINE-IN ORDER ===");
         System.out.println(" Cashier: " + getName());
         System.out.println(" Customer: " + customer.getName());
-        System.out.println(" Table: #" + table.getTableNumber());
+    
+        System.out.print("\n Enter number of people: ");
+        int numberOfPeople;
+    
+        try {
+            numberOfPeople = scanner.nextInt();
+            scanner.nextLine(); 
+        
+            if (numberOfPeople <= 0) {
+                System.out.println(" Invalid number of people!");
+                return null;
+            }
+        } catch (InputMismatchException e) {
+            System.out.println(" Invalid input!");
+            scanner.nextLine();
+            return null;
+        }
+    
+        Table selectedTable = Table.selectTableForCapacity(tables, scanner, numberOfPeople);
+    
+        if (selectedTable == null) {
+            System.out.println(" No suitable table available. Order cancelled.");
+            return null;
+        }
 
+        System.out.println(" Table #" + selectedTable.getTableNumber() + " assigned");
+    
+        this.assignedTable = selectedTable; 
         customer.incrementDineInCount();
 
-        Order order = new Order(customer.getCustomerId(), items, Systemmode.DINE_IN, table);
+        Order order = new Order(customer.getCustomerId(), items, Systemmode.DINE_IN, selectedTable);
         order.calculateSubtotal();
         order.applyEliteDiscount(customer.isEliteCustomer(), customer.isSubscriptionActive());
         order.calculateTotal();
 
-        System.out.println(" Dine-in order processed!");
+        System.out.println(" Dine-in order processed successfully!");
         System.out.println(" Order ID: " + order.getOrderId());
-        System.out.println(" Total: EGP " + order.getTotal());
-        
+        System.out.println(" Total: EGP " + String.format("%.2f", order.getTotal()));
+    
         return order;
     }
 
-    //Accept payment for an order
     public boolean acceptPayment(Order order, double paymentAmount, Payment.PaymentMethod paymentMethod) {
         if (order == null) {
             System.out.println(" Error: No order!");
@@ -112,7 +128,6 @@ public class Cashier extends Person {
         return success;
     }
 
-    // Print receipt
     public void printReceipt(Order order) {
         System.out.println("\n" + "=".repeat(60));
         System.out.println("                     RECEIPT");
