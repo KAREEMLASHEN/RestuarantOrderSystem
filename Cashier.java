@@ -134,6 +134,13 @@ public class Cashier extends Person {
         System.out.println("=".repeat(60));
         System.out.println(" Cashier: " + getName() + " (" + id + ")");
         System.out.println(" Order ID: " + order.getOrderId());
+        
+        if (order.getOrderDate() != null) {
+            java.time.format.DateTimeFormatter dateFormatter = 
+                java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy - hh:mm a");
+            System.out.println(" Date: " + order.getOrderDate().format(dateFormatter));
+        }
+        
         System.out.println("-".repeat(60));
         System.out.println("Items Ordered:");
 
